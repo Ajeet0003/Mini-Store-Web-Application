@@ -6,21 +6,58 @@ from store.models.category import Category
 from store.models.customer import Customer
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.hashers import make_password,check_password
+from django.views import View
+
+
+class Index(View):
+
+    def post(self,request):
+        product=request.POST.get('product')
+        cart=request.session.get('cart')
+        if cart:
+            quantity=cart.get(product)
+            if quantity:
+                cart[product]=quantity+1
+            else:
+                cart[product]=1
+        else:
+            cart={}
+            cart[product]=1
+
+            request.session['cart']=cart
+
+        return redirect('homepage')
+
+
+
+    def get(self,request):
+        products = None
+        # request.session.get('cart').clear()
+        categories = Category.get_all_categories()
+        categoryID = request.GET.get('category')
+        if categoryID:
+            products = Product.get_all_product_by_categoryid(categoryID)
+        else:
+            products = Product.get_all_products();
+        data = {}
+        data['products'] = products
+        data['categories'] = categories
+        return render(request, 'index.html', data)
 
 
 # Create your views here.
-def index(request):
-    products = None
-    categories = Category.get_all_categories()
-    categoryID = request.GET.get('category')
-    if categoryID:
-        products = Product.get_all_product_by_categoryid(categoryID)
-    else:
-        products = Product.get_all_products();
-    data = {}
-    data['products'] = products
-    data['categories'] = categories
-    return render(request, 'index.html', data)
+# def index(request):
+#     products = None
+#     categories = Category.get_all_categories()
+#     categoryID = request.GET.get('category')
+#     if categoryID:
+#         products = Product.get_all_product_by_categoryid(categoryID)
+#     else:
+#         products = Product.get_all_products();
+#     data = {}
+#     data['products'] = products
+#     data['categories'] = categories
+#     return render(request, 'index.html', data)
 
 # def sign_up(request):
 #     fm=UserCreationForm()
@@ -77,6 +114,9 @@ def login(request):
         if customer:
             flag=check_password(password,customer.password)
             if flag:
+                request.session['customer_id']=customer.id
+                request.session['email']=customer.email
+
                 return redirect('homepage')
             else:
                 error_message='email or password invalid'
